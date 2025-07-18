@@ -1,0 +1,119 @@
+{
+  "name": "cdn-checker",
+  "displayName": "CDN Checker",
+  "description": "Checks if image/video/script links in your project are broken, redirecting, or too large.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.102.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cdn-checker.checkLinks",
+        "title": "Check All Links",
+        "category": "CDN Checker"
+      },
+      {
+        "command": "cdn-checker.checkCurrentFile",
+        "title": "Check Current File Links",
+        "category": "CDN Checker"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "cdn-checker.checkLinks",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "cdn-checker.checkCurrentFile",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CDN Checker",
+      "properties": {
+        "cdn-checker.maxFileSize": {
+          "type": "number",
+          "default": 5242880,
+          "description": "Maximum file size in bytes (default: 5MB)"
+        },
+        "cdn-checker.timeout": {
+          "type": "number",
+          "default": 10000,
+          "description": "Request timeout in milliseconds (default: 10s)"
+        },
+        "cdn-checker.fileExtensions": {
+          "type": "array",
+          "default": [
+            ".html",
+            ".htm",
+            ".js",
+            ".ts",
+            ".jsx",
+            ".tsx",
+            ".css",
+            ".scss",
+            ".sass",
+            ".less",
+            ".vue",
+            ".svelte",
+            ".md",
+            ".json",
+            "*.go",
+            "*.py",
+            "*.php",
+            "*.rb",
+            "*.java",
+            "*.kt",
+            "*.swift",
+            "*.c",
+            "*.cpp",
+            "*.txt",
+            "*.md",
+            "*.cs"
+          ],
+          "description": "File extensions to scan for links"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run package",
+    "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.102.0",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.3",
+    "eslint": "^9.25.1",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "axios": "^1.10.0"
+  }
+}
