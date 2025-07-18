@@ -82,6 +82,18 @@
             "*.cs"
           ],
           "description": "File extensions to scan for links"
+        },
+        "cdn-checker.CheckForFileTypes":{
+          "type": "array",
+          "default": [
+            "image",
+            "video",
+            "pdf",
+            "script",
+            "stylesheet",
+            "unknown"
+          ],
+          "description": "File links to check"
         }
       }
     }
