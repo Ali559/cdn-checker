@@ -8,7 +8,7 @@ interface LinkInfo {
 	line: number;
 	column: number;
 	file: string;
-	type: 'image' | 'video' | 'document' | 'pdf' | 'all';
+	type: 'image' | 'video' | 'document' | 'pdf' | 'script' | 'stylesheet' | 'all';
 }
 
 interface CheckResult {
@@ -130,9 +130,10 @@ async function extractLinksFromFile(filePath: string, fileTypeToLookFor: string)
 	const content = await fs.promises.readFile(filePath, 'utf-8');
 	const links: LinkInfo[] = [];
 	const lines = content.split('\n');
-
+	const urlPattern = 'https?://(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,6}(?:/[^#?&]*)?(?:/[a-zA-Z0-9_-]+/)*(?:[a-zA-Z0-9_.-]+\\.(?:[a-zA-Z0-9]+))?(?:\\?[^#\\s]*)?(?:#[^\\s]*)?';
 	// Regular expressions for different link types
 	const patterns = [
+		// Absolute URLs
 		{ regex: /(?:)(https?:\/\/(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}(?:\/[^#?&]*)?\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(?:jpe?g|png|gif|bmp|svg|webp|tiff|ico|avif|heic))/gi, type: 'image' as const },
 		{ regex: /(?:)(https?:\/\/(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}(?:\/[^#?&]*)?\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(?:mp4|avi|mov|wmv|flv|mkv|webm|3gp|ogg)|https?:\/\/(?:www\.)?youtube\.com\/(?:watch\?v=|embed\/|v\/|)([a-zA-Z0-9_-]{11})|https?:\/\/(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]{11})|https?:\/\/(?:www\.)?vimeo\.com\/([0-9]+))/gi, type: 'video' as const },
 		{ regex: /(?:)(https?:\/\/(?:docs|drive)\.google\.com\/(?:document|presentation|spreadsheets|forms|drawings)\/d\/([a-zA-Z0-9_-]+)(?:\/edit|\/view|\/preview|\/pub)?(?:[?#].*)?)/gi, type: 'document' as const },
@@ -140,6 +141,18 @@ async function extractLinksFromFile(filePath: string, fileTypeToLookFor: string)
 		{ regex: /(?:)(https?:\/\/(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}(?:\/[^#?&]*)?\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.pdf(?:[?#].*)?)/gi, type: 'document' as const },
 		{ regex: /(?:)(https?:\/\/(?:[a-zA-Z0-9-]+\.)*(?:unsplash\.com|img[a-zA-Z0-9-]*\.[a-zA-Z]{2,6}|cdn[a-zA-Z0-9-]*\.[a-zA-Z]{2,6}|images?\.[a-zA-Z0-9-]+\.[a-zA-Z]{2,6})\/(?:[^\s?#]+\/)*[^\s?#]+\?[^#\s]+)/gi, type: 'image' as const },
 		{ regex: /!\[.*?\]\(([^)]+)\)/gi, type: 'image' as const },
+		// Images: <img src="...">, url() in CSS, ![](...) in Markdown, general image URLs
+		{ regex: new RegExp(`(?:<img[^>]*src=["'](${urlPattern})["']|url\\(['"]?(${urlPattern})['"]?\\)|!\\[.*?\\]\\((${urlPattern})\\)|${urlPattern}\\.(?:jpe?g|png|gif|bmp|svg|webp|tiff|ico|avif|heic))`, 'gi'), type: 'image' as const },
+		// Videos: <video src="...">, <source src="...">, YouTube, Vimeo
+		{ regex: new RegExp(`(?:<video[^>]*src=["'](${urlPattern})["']|<source[^>]*src=["'](${urlPattern})["']|https?://(?:www\\.)?youtube\\.com/(?:watch\\?v=|embed/|v/)([a-zA-Z0-9_-]{11})|https?://(?:www\\.)?youtu\\.be/([a-zA-Z0-9_-]{11})|https?://(?:www\\.)?vimeo\\.com/([0-9]+))`, 'gi'), type: 'video' as const },
+		// Scripts: <script src="...">, import ... from "...", general JS files
+		{ regex: new RegExp(`(?:<script[^>]*src=["'](${urlPattern})["']|import\\s+(?:\\{[^}]*\\}|\\*\\s+as\\s+\\w+)?\\s*from\\s*["'](${urlPattern})["']|${urlPattern}\\.js)`, 'gi'), type: 'script' as const },
+		// Stylesheets: <link href="...">, url() in CSS (already covered by image, but good to have a specific catch for .css), general CSS files
+		{ regex: new RegExp(`(?:<link[^>]*href=["'](${urlPattern})["']|${urlPattern}\\.css)`, 'gi'), type: 'stylesheet' as const },
+		// Documents: Google Docs/Drive, Microsoft Office (SharePoint/OneDrive/docs.microsoft.com)
+		{ regex: new RegExp(`(?:https?://(?:docs|drive)\\.google\\.com/(?:document|presentation|spreadsheets|forms|drawings)/d/([a-zA-Z0-9_-]+)(?:/edit|/view|/preview|/pub)?(?:[?#].*)?|https?://(?:(?:[a-zA-Z0-9-]+\\.)*sharepoint\\.com|(?:[a-zA-Z0-9-]+\\.)*onedrive\\.live\\.com|docs\\.microsoft\\.com)/[^#?&]+\\.(?:docx|xlsx|pptx|doc|xls|ppt)(?:[?#].*)?)`, 'gi'), type: 'document' as const },
+		// PDFs: Specific PDF links
+		{ regex: new RegExp(`(?:${urlPattern}\\.pdf)`, 'gi'), type: 'pdf' as const },
 	];
 
 	const filePatterns = patterns.filter((pattern) => {

@@ -90,6 +90,8 @@
             "video",
             "document",
             "pdf",
+            "stylesheet",
+            "script",
             "all"
           ],
           "default": "all",
@@ -97,6 +99,8 @@
           "enumItemLabels": [
             "Image",
             "Video",
+            "Script",
+            "Stylesheet",
             "Document",
             "PDF",
             "All"
@@ -106,6 +110,9 @@
             "Check for video links",
             "Check for document links",
             "Check for PDF links",
+            "Check for all links",
+            "Check for script links",
+            "Check for stylesheet links",
             "Check for all links"
           ]
         }
