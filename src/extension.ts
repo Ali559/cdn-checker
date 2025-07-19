@@ -8,7 +8,7 @@ interface LinkInfo {
 	line: number;
 	column: number;
 	file: string;
-	type: 'image' | 'video' | 'script' | 'stylesheet' | 'unknown';
+	type: 'image' | 'video' | 'document' | 'pdf' | 'all';
 }
 
 interface CheckResult {
@@ -43,7 +43,7 @@ async function checkAllLinks() {
 
 	const config = vscode.workspace.getConfiguration('cdn-checker');
 	const fileExtensions = config.get<string[]>('fileExtensions') || [];
-
+	const filesToCheckFor = config.get<string>('filesToCheckFor') || 'all';
 	vscode.window.withProgress({
 		location: vscode.ProgressLocation.Notification,
 		title: 'CDN Checker: Scanning files...',
@@ -63,7 +63,7 @@ async function checkAllLinks() {
 					increment: (1 / files.length) * 50
 				});
 
-				const links = await extractLinksFromFile(files[i]);
+				const links = await extractLinksFromFile(files[i], filesToCheckFor);
 				allLinks.push(...links);
 			}
 
@@ -83,17 +83,18 @@ async function checkCurrentFile() {
 	}
 
 	const filePath = activeEditor.document.fileName;
-
+	const config = vscode.workspace.getConfiguration('cdn-checker');
+	const filesToCheckFor = config.get<string>('filesToCheckFor') || 'all';
 	vscode.window.withProgress({
 		location: vscode.ProgressLocation.Notification,
 		title: 'CDN Checker: Checking current file...',
 		cancellable: true
 	}, async (progress, token) => {
 		try {
-			const links = await extractLinksFromFile(filePath);
+			const links = await extractLinksFromFile(filePath, filesToCheckFor);
 
 			if (links.length === 0) {
-				vscode.window.showInformationMessage('No links found in current file');
+				vscode.window.showInformationMessage(`No links of type ${filesToCheckFor === 'all' ? 'Image | Video | Document | PDF' : filesToCheckFor.toUpperCase()} found in current file`);
 				return;
 			}
 
@@ -125,35 +126,32 @@ async function findFilesInWorkspace(workspacePath: string, extensions: string[])
 	return files;
 }
 
-async function extractLinksFromFile(filePath: string): Promise<LinkInfo[]> {
+async function extractLinksFromFile(filePath: string, fileTypeToLookFor: string): Promise<LinkInfo[]> {
 	const content = await fs.promises.readFile(filePath, 'utf-8');
 	const links: LinkInfo[] = [];
 	const lines = content.split('\n');
 
 	// Regular expressions for different link types
 	const patterns = [
-		// HTML img src
-		{ regex: /<img[^>]+src\s*=\s*["']([^"']+)["']/gi, type: 'image' as const },
-		// HTML video src
-		{ regex: /<video[^>]+src\s*=\s*["']([^"']+)["']/gi, type: 'video' as const },
-		// HTML source src (for video/audio)
-		{ regex: /<source[^>]+src\s*=\s*["']([^"']+)["']/gi, type: 'video' as const },
-		// HTML script src
-		{ regex: /<script[^>]+src\s*=\s*["']([^"']+)["']/gi, type: 'script' as const },
-		// HTML link href (stylesheets)
-		{ regex: /<link[^>]+href\s*=\s*["']([^"']+)["']/gi, type: 'stylesheet' as const },
-		// CSS url() - images and fonts
-		{ regex: /url\s*\(\s*["']?([^"')]+)["']?\s*\)/gi, type: 'image' as const },
-		// JavaScript/TypeScript imports
-		{ regex: /import\s+.*\s+from\s+["']([^"']+)["']/gi, type: 'script' as const },
-		// Markdown images
+		{ regex: /(?:)(https?:\/\/(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}(?:\/[^#?&]*)?\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(?:jpe?g|png|gif|bmp|svg|webp|tiff|ico|avif|heic))/gi, type: 'image' as const },
+		{ regex: /(?:)(https?:\/\/(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}(?:\/[^#?&]*)?\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(?:mp4|avi|mov|wmv|flv|mkv|webm|3gp|ogg)|https?:\/\/(?:www\.)?youtube\.com\/(?:watch\?v=|embed\/|v\/|)([a-zA-Z0-9_-]{11})|https?:\/\/(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]{11})|https?:\/\/(?:www\.)?vimeo\.com\/([0-9]+))/gi, type: 'video' as const },
+		{ regex: /(?:)(https?:\/\/(?:docs|drive)\.google\.com\/(?:document|presentation|spreadsheets|forms|drawings)\/d\/([a-zA-Z0-9_-]+)(?:\/edit|\/view|\/preview|\/pub)?(?:[?#].*)?)/gi, type: 'document' as const },
+		{ regex: /(?:)(https?:\/\/(?:(?:[a-zA-Z0-9-]+\.)*sharepoint\.com|(?:[a-zA-Z0-9-]+\.)*onedrive\.live\.com|docs\.microsoft\.com)\/[^#?&]+\.(?:docx|xlsx|pptx|doc|xls|ppt)(?:[?#].*)?)/gi, type: 'document' as const },
+		{ regex: /(?:)(https?:\/\/(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}(?:\/[^#?&]*)?\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.pdf(?:[?#].*)?)/gi, type: 'document' as const },
+		{ regex: /(?:)(https?:\/\/(?:[a-zA-Z0-9-]+\.)*(?:unsplash\.com|img[a-zA-Z0-9-]*\.[a-zA-Z]{2,6}|cdn[a-zA-Z0-9-]*\.[a-zA-Z]{2,6}|images?\.[a-zA-Z0-9-]+\.[a-zA-Z]{2,6})\/(?:[^\s?#]+\/)*[^\s?#]+\?[^#\s]+)/gi, type: 'image' as const },
 		{ regex: /!\[.*?\]\(([^)]+)\)/gi, type: 'image' as const },
-		// Generic HTTP/HTTPS URLs
-		{ regex: /https?:\/\/[^\s"'<>]+/gi, type: 'unknown' as const }
 	];
 
+	const filePatterns = patterns.filter((pattern) => {
+		if (fileTypeToLookFor === 'all') {
+			return true;
+		}
+		return pattern.type === fileTypeToLookFor;
+	});
+
 	lines.forEach((line, lineIndex) => {
-		patterns.forEach(({ regex, type }) => {
+		for (let i = 0; i < filePatterns.length; i++) {
+			const { regex, type } = filePatterns[i];
 			let match;
 			while ((match = regex.exec(line)) !== null) {
 				const url = match[1] || match[0];
@@ -169,7 +167,7 @@ async function extractLinksFromFile(filePath: string): Promise<LinkInfo[]> {
 					});
 				}
 			}
-		});
+		}
 	});
 
 	return links;

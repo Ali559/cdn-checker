@@ -83,17 +83,31 @@
           ],
           "description": "File extensions to scan for links"
         },
-        "cdn-checker.CheckForFileTypes":{
-          "type": "array",
-          "default": [
+        "cdn-checker.filesToCheckFor": {
+          "type": "string",
+          "enum": [
             "image",
             "video",
+            "document",
             "pdf",
-            "script",
-            "stylesheet",
-            "unknown"
+            "all"
           ],
-          "description": "File links to check"
+          "default": "all",
+          "description": "File types to check for",
+          "enumItemLabels": [
+            "Image",
+            "Video",
+            "Document",
+            "PDF",
+            "All"
+          ],
+          "enumDescriptions": [
+            "Check for image links",
+            "Check for video links",
+            "Check for document links",
+            "Check for PDF links",
+            "Check for all links"
+          ]
         }
       }
     }
