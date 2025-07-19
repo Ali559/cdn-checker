@@ -119,6 +119,10 @@
       }
     }
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ali559/cdn-checker.git"
+  },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
     "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
