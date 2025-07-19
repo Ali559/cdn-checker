@@ -176,15 +176,15 @@ async function findFilesInWorkspace(workspacePath: string, extensions: string[])
 	return files;
 }
 
-/**
- * Extracts links from the given file. The links are extracted from the file content
- * using regular expressions. The links are then returned as an array of objects with
- * the following properties: `url`, `line`, `column`, `file`, and `type`.
- *
- * @param filePath The path to the file to extract links from.
- * @param fileTypeToLookFor The type of file to look for links in. Can be 'image', 'video', 'document', 'pdf', 'script', 'stylesheet', or 'all'.
- * @returns A promise that resolves to an array of link objects.
- */
+	/**
+	 * Extracts links from the given file. The links are extracted from the file content
+	 * using regular expressions. The links are then returned as an array of objects with
+	 * the following properties: `url`, `line`, `column`, `file`, and `type`.
+	 *
+	 * @param filePath The path to the file to extract links from.
+	 * @param fileTypeToLookFor The type of file to look for links in. Can be 'image', 'video', 'document', 'pdf', 'script', 'stylesheet', or 'all'.
+	 * @returns A promise that resolves to an array of link objects.
+	 */
 async function extractLinksFromFile(filePath: string, fileTypeToLookFor: string): Promise<LinkInfo[]> {
 	const content = await fs.promises.readFile(filePath, 'utf-8');
 	const links: LinkInfo[] = [];
@@ -245,19 +245,19 @@ async function extractLinksFromFile(filePath: string, fileTypeToLookFor: string)
 	return links;
 }
 
-/**
- * Checks a list of links and reports on their status.
- *
- * The function takes a list of LinkInfo objects and a progress
- * notification, and checks each link for its status. The results
- * are then processed and displayed in a report.
- *
- * @param links - A list of LinkInfo objects to check.
- * @param progress - A progress notification to report on the
- * checking process.
- * @param token - A cancellation token to check if the user has
- * canceled the operation.
- */
+	/**
+	 * Checks a list of links and reports on their status.
+	 *
+	 * The function takes a list of LinkInfo objects and a progress
+	 * notification, and checks each link for its status. The results
+	 * are then processed and displayed in a report.
+	 *
+	 * @param links - A list of LinkInfo objects to check.
+	 * @param progress - A progress notification to report on the
+	 * checking process.
+	 * @param token - A cancellation token to check if the user has
+	 * canceled the operation.
+	 */
 async function checkLinks(links: LinkInfo[], progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) {
 	const config = vscode.workspace.getConfiguration('cdn-checker');
 	const maxFileSize = config.get<number>('maxFileSize') || 5242880; // 5MB

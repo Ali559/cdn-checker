@@ -9,7 +9,6 @@
   "categories": [
     "Other"
   ],
-  "publisher": "alibarznji",
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {

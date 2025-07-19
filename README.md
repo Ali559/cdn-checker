@@ -169,4 +169,11 @@ This command runs `esbuild` in watch mode and `tsc` for type checking, ensuring 
 
 ## License
 
+<<<<<<< HEAD
 This extension is licensed under the [MIT License](https://www.google.com/search?q=LICENSE).
+=======
+This extension is licensed under the [MIT License](https://www.google.com/search?q=LICENSE).
+
+
+
+>>>>>>> parent of f03ee0e (update)
