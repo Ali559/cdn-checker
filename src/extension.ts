@@ -20,6 +20,17 @@ interface CheckResult {
 	error?: string;
 }
 
+/**
+ * Activates the CDN Checker extension.
+ *
+ * This function is called when the extension is activated. It registers the
+ * commands for checking all links in the workspace and checking links in the
+ * current file, and adds them to the extension's subscriptions for proper
+ * cleanup when the extension is deactivated.
+ *
+ * @param context - The extension context provided by VS Code, which is used
+ * to manage the extension's lifecycle and state.
+ */
 export function activate(context: vscode.ExtensionContext) {
 	console.log('CDN Checker extension is now active!');
 
@@ -34,6 +45,21 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(checkLinksCommand, checkCurrentFileCommand);
 }
 
+
+
+/**
+ * Scans all files in the workspace for external links and checks their status.
+ *
+ * This function retrieves the workspace folder, obtains the configuration for
+ * file extensions to scan, and the types of files to check for links. It then
+ * iterates over all matching files in the workspace, extracting links and
+ * checking their status using the CDN Checker. Progress is reported to the user
+ * during the operation, and any errors encountered are displayed as messages.
+ *
+ * The function utilizes a progress notification to provide feedback on the
+ * scanning and checking processes. If the user cancels the operation, it
+ * terminates early.
+ */
 async function checkAllLinks() {
 	const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 	if (!workspaceFolder) {
@@ -75,6 +101,20 @@ async function checkAllLinks() {
 	});
 }
 
+/**
+ * Checks all external links in the currently active file for their status.
+ *
+ * This function retrieves the active text editor and file path, then uses the
+ * configured link types to scan the file for external URLs. It reports progress
+ * during the operation and handles any errors that occur.
+ *
+ * If no active file is found, an error message is displayed to the user.
+ * If no links of the specified types are found, an informational message is shown.
+ *
+ * Progress is reported through a notification, and the link checking can be
+ * canceled by the user. Results are processed and displayed by the link checking
+ * function.
+ */
 async function checkCurrentFile() {
 	const activeEditor = vscode.window.activeTextEditor;
 	if (!activeEditor) {
@@ -105,6 +145,16 @@ async function checkCurrentFile() {
 	});
 }
 
+/**
+ * Recursively scans the given workspace directory and its subdirectories for files
+ * with the given extensions. Ignores hidden directories and the node_modules
+ * directory. Returns a promise that resolves to an array of file paths.
+ *
+ * @param workspacePath The path to the workspace directory to scan.
+ * @param extensions An array of file extensions (without leading dots) to search
+ * for.
+ * @returns A promise that resolves to an array of file paths.
+ */
 async function findFilesInWorkspace(workspacePath: string, extensions: string[]): Promise<string[]> {
 	const files: string[] = [];
 
@@ -126,6 +176,15 @@ async function findFilesInWorkspace(workspacePath: string, extensions: string[])
 	return files;
 }
 
+	/**
+	 * Extracts links from the given file. The links are extracted from the file content
+	 * using regular expressions. The links are then returned as an array of objects with
+	 * the following properties: `url`, `line`, `column`, `file`, and `type`.
+	 *
+	 * @param filePath The path to the file to extract links from.
+	 * @param fileTypeToLookFor The type of file to look for links in. Can be 'image', 'video', 'document', 'pdf', 'script', 'stylesheet', or 'all'.
+	 * @returns A promise that resolves to an array of link objects.
+	 */
 async function extractLinksFromFile(filePath: string, fileTypeToLookFor: string): Promise<LinkInfo[]> {
 	const content = await fs.promises.readFile(filePath, 'utf-8');
 	const links: LinkInfo[] = [];
@@ -186,6 +245,19 @@ async function extractLinksFromFile(filePath: string, fileTypeToLookFor: string)
 	return links;
 }
 
+	/**
+	 * Checks a list of links and reports on their status.
+	 *
+	 * The function takes a list of LinkInfo objects and a progress
+	 * notification, and checks each link for its status. The results
+	 * are then processed and displayed in a report.
+	 *
+	 * @param links - A list of LinkInfo objects to check.
+	 * @param progress - A progress notification to report on the
+	 * checking process.
+	 * @param token - A cancellation token to check if the user has
+	 * canceled the operation.
+	 */
 async function checkLinks(links: LinkInfo[], progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken) {
 	const config = vscode.workspace.getConfiguration('cdn-checker');
 	const maxFileSize = config.get<number>('maxFileSize') || 5242880; // 5MB
@@ -218,6 +290,22 @@ async function checkLinks(links: LinkInfo[], progress: vscode.Progress<{ message
 
 	await showResults(results);
 }
+
+/**
+ * Checks the status of a single URL by performing an HTTP HEAD request.
+ *
+ * This function determines if the URL is working, redirects, is too large, or
+ * if there are other issues. It checks for redirections (301, 302), ensures
+ * the file size does not exceed the given maximum size, and handles timeouts
+ * and errors.
+ *
+ * @param url - The URL to be checked.
+ * @param maxFileSize - The maximum allowed file size in bytes.
+ * @param timeout - The maximum time to wait for a response in milliseconds.
+ * @returns A promise that resolves with a CheckResult object describing the
+ * status of the link, including any errors, status codes, or redirection
+ * details.
+ */
 
 async function checkSingleLink(url: string, maxFileSize: number, timeout: number): Promise<CheckResult> {
 	try {
@@ -280,6 +368,16 @@ async function checkSingleLink(url: string, maxFileSize: number, timeout: number
 	}
 }
 
+/**
+ * Displays the results of the link check to the user.
+ *
+ * If no problems were found, a simple informational message is displayed.
+ * If there were problems, a new Markdown document is created and opened with
+ * the detailed results, and a warning message is displayed with the number of
+ * issues found.
+ *
+ * @param results - An array of objects with link information and check results.
+ */
 async function showResults(results: (LinkInfo & CheckResult)[]) {
 	const problems = results.filter(r => r.status !== 'ok');
 
@@ -301,6 +399,19 @@ async function showResults(results: (LinkInfo & CheckResult)[]) {
 	);
 }
 
+/**
+ * Generates a Markdown report for the given link check results.
+ *
+ * The report summarizes the number of OK and problem links, and then lists
+ * all problems found, grouped by status. Each problem is listed with its
+ * URL, file location, type, and any relevant additional information (e.g.
+ * status code, redirect URL, size, error message).
+ *
+ * If there are working links, they are listed at the end of the report.
+ *
+ * @param results - An array of objects with link information and check results.
+ * @returns A Markdown-formatted string containing the report.
+ */
 function generateResultsReport(results: (LinkInfo & CheckResult)[]): string {
 	const problems = results.filter(r => r.status !== 'ok');
 	const okCount = results.filter(r => r.status === 'ok').length;

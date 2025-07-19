@@ -170,3 +170,6 @@ This command runs `esbuild` in watch mode and `tsc` for type checking, ensuring 
 ## License
 
 This extension is licensed under the [MIT License](https://www.google.com/search?q=LICENSE).
+
+
+
