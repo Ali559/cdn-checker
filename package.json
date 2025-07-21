@@ -2,7 +2,7 @@
   "name": "cdn-checker",
   "displayName": "CDN Checker",
   "description": "Checks if image/video/script links in your project are broken, redirecting, or too large.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "icon": "images/icon.png",
   "engines": {
     "vscode": "^1.102.0"
