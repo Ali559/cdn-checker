@@ -9,7 +9,11 @@
   },
   "publisher": "alibarznji",
   "categories": [
-    "Other"
+    "Other",
+    "Testing",
+    "Debuggers",
+    "Visualization",
+    "Programming Languages"
   ],
   "author": {
     "email": "ali99yasin@gmail.com",
